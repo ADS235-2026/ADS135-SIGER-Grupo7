@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: siger-api
+    env: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        value: https://siger-web.onrender.com
+
+  - type: web
+    name: siger-web
+    env: docker
+    rootDir: frontend
+    plan: free
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://siger-api.onrender.com
