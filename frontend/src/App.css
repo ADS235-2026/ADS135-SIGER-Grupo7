@@ -649,6 +649,32 @@ button {
   font-size: 20px;
 }
 
+.capacity-meter {
+  display: grid;
+  gap: 7px;
+  margin-top: 2px;
+}
+
+.capacity-meter > span {
+  background: var(--surface-mid);
+  border-radius: 999px;
+  display: block;
+  height: 8px;
+  overflow: hidden;
+}
+
+.capacity-meter i {
+  background: linear-gradient(90deg, var(--primary), #c45f56);
+  display: block;
+  height: 100%;
+}
+
+.capacity-meter small {
+  color: var(--variant);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .button-pair {
   display: grid;
   gap: 10px;
@@ -732,19 +758,70 @@ button {
   color: var(--muted);
 }
 
+.scanner-input {
+  color: var(--variant);
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+  margin-top: 10px;
+  max-width: 260px;
+  text-align: left;
+  width: 100%;
+}
+
+.scanner-input input {
+  background: #fff;
+  border: 1px solid var(--surface-line);
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 800;
+  min-height: 42px;
+  outline: 0;
+  padding: 0 12px;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.scanner-input input:focus {
+  border-color: var(--line-warm);
+}
+
 .bar-chart {
   align-items: end;
   display: grid;
-  gap: 12px;
+  gap: 14px;
   grid-template-columns: repeat(7, 1fr);
   height: 280px;
-  padding-top: 24px;
+  padding: 34px 0 26px;
 }
 
 .bar-chart span {
   background: linear-gradient(180deg, #7b1c1c, #ddc0bd);
   border-radius: 8px 8px 0 0;
+  display: block;
   min-height: 28px;
+  position: relative;
+}
+
+.bar-chart i,
+.bar-chart small {
+  color: var(--variant);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.bar-chart i {
+  top: -22px;
+}
+
+.bar-chart small {
+  bottom: -24px;
 }
 
 .progress-row {
@@ -857,6 +934,36 @@ button {
   letter-spacing: 0.08em;
   margin: 10px 0;
   padding: 18px 26px;
+}
+
+.empty-state {
+  align-items: center;
+  background: var(--surface-low);
+  border: 1px dashed var(--surface-line);
+  border-radius: 8px;
+  color: var(--muted);
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  min-height: 180px;
+  padding: 28px;
+  text-align: center;
+}
+
+.empty-state .material-symbols-outlined {
+  color: var(--primary);
+  font-size: 46px;
+}
+
+.empty-state strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.empty-state p {
+  line-height: 1.5;
+  margin: 0;
+  max-width: 420px;
 }
 
 .auth-workspace {
