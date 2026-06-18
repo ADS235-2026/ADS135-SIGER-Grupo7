@@ -1,70 +1,78 @@
-# Getting Started with Create React App
+# SIGER Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Aplicacion web de SIGER construida con React. El frontend presenta las pantallas de autenticacion, panel administrativo, catalogo de eventos, reservaciones, asistencia, usuarios y reportes.
 
-## Available Scripts
+## Estructura
 
-In the project directory, you can run:
+```text
+src/
+  App.js                    Coordinacion de estado, API y vistas
+  App.css                   Estilos globales de la interfaz
+  components/
+    common.js               Componentes reutilizables
+    layout.js               Sidebar y topbar
+  data/
+    seedData.js             Datos iniciales y navegacion
+  utils/
+    formatters.js           Formato de fechas, horas, roles y ocupacion
+  views/
+    AuthViews.js            Login, registro y confirmacion
+    DashboardViews.js       Panel administrativo y organizador
+    EventViews.js           Catalogo, detalle y creacion de eventos
+    ManagementViews.js      Reservaciones, asistencia, usuarios y reportes
+```
 
-### `npm start`
+## Scripts
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Desde `frontend/`:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+npm install
+npm start
+```
 
-### `npm test`
+La aplicacion de desarrollo abre en `http://localhost:3000`.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Para compilar:
 
-### `npm run build`
+```bash
+npm run build
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Para pruebas:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm test
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Configuracion de API
 
-### `npm run eject`
+El frontend toma la URL de la API en este orden:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. `window.__SIGER_CONFIG__.API_URL`
+2. `process.env.REACT_APP_API_URL`
+3. `http://localhost:4000`
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+En Docker, Nginx genera `env.js` a partir de `public/env.template.js`, usando `REACT_APP_API_URL`.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Docker
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Desde la raiz del repositorio:
 
-## Learn More
+```bash
+docker compose up --build web
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+El frontend queda disponible en `http://localhost:8081`.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Pantallas
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Login y registro de usuario.
+- Panel de control con metricas y actividad.
+- Vista de organizador por etapas.
+- Catalogo con filtros y medidor de ocupacion.
+- Detalle de evento y confirmacion de reservacion.
+- Mis reservaciones.
+- Control de asistencia por codigo.
+- Gestion de usuarios.
+- Reportes y estadisticas.
