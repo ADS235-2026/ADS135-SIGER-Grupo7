@@ -64,13 +64,9 @@ mise dev
 
 También están disponibles `mise test`, `mise migrate`, `mise seed`, `mise logs`, `mise up` y `mise down`.
 
-## Usuarios de Prueba
+## Datos sintéticos
 
-| Rol | Correo | Contrasena |
-| --- | --- | --- |
-| Administrador | `admin@siger.edu` | `Admin123!` |
-| Organizador | `organizador@siger.edu` | `Organizador123!` |
-| Participante | `carlos@siger.edu` | `Carlos123!` |
+`python -m scripts.seed` crea usuarios, categorías, eventos y reservas solo si la base está vacía. Las contraseñas se generan aleatoriamente y se muestran una sola vez en la salida del comando; también pueden proporcionarse mediante `SEED_ADMIN_PASSWORD`, `SEED_ORGANIZER_PASSWORD` y `SEED_PARTICIPANT_PASSWORD` sin guardarlas en el repositorio.
 
 ## Variables de Entorno
 
@@ -108,3 +104,7 @@ Desde `backend/`: `python -m venv .venv && . .venv/bin/activate && pip install -
 Aplicar migraciones con `alembic upgrade head`, cargar datos sintéticos con `python -m scripts.seed` y ejecutar pruebas con `pytest -q`.
 
 El frontend conserva las rutas y nombres de campos del prototipo. Los eventos borrador se excluyen del catálogo del participante y los errores HTTP se muestran mediante el aviso existente. Notificaciones externas, exportaciones y comprobantes descargables no estaban implementados, por lo que no se simulan.
+
+Las fechas y horas de los eventos se almacenan separadas como `DATE` y `TIME`. La API valida si un evento ya pasó usando `TIMEZONE` (por defecto `America/El_Salvador`), sin depender de la zona horaria accidental del equipo.
+
+Las reservas generan notificaciones internas persistidas. Los reportes pueden descargarse en CSV, Excel o PDF desde `GET /reports/export?format=...`; cada exportación queda registrada en `reportes`. El envío por correo solo se activa al configurar SMTP.

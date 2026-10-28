@@ -10,11 +10,12 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Autenticación requerida")
     payload = decode_token(authorization[7:])
     user = db.get(User, int(payload["sub"]))
-    if not user or user.state != "Activo": raise HTTPException(401, "Usuario no disponible")
+    if not user or not user.state: raise HTTPException(401, "Usuario no disponible")
     return user
 
 def require_roles(*roles):
     def dependency(user: User = Depends(current_user)):
-        if user.role not in roles: raise HTTPException(403, "No tienes permisos para esta operación")
+        normalized = {"administrador": "admin", "organizador": "organizer", "participante": "participant"}.get(user.role, user.role)
+        if normalized not in roles: raise HTTPException(403, "No tienes permisos para esta operación")
         return user
     return dependency

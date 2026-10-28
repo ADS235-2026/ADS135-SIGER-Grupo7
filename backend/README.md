@@ -23,6 +23,7 @@ Pruebas: `pytest -q`. La documentación interactiva está disponible en `/docs`.
 - `PORT`: puerto de la API. Por defecto `4000`.
 - `JWT_SECRET`: secreto requerido para firmar tokens.
 - `FRONTEND_ORIGIN`: origen permitido por CORS. Puede recibir varios origenes separados por coma.
+- `TIMEZONE`: zona horaria de negocio para validar eventos futuros; por defecto `America/El_Salvador`.
 
 Ejemplo:
 
@@ -53,18 +54,18 @@ Protegidos:
 - `GET /attendance/:eventId`: asistencia por evento.
 - `GET /users`: usuarios, solo administrador.
 - `GET /reports/summary`: resumen estadistico.
-
-## Usuarios Seed
-
-| Rol | Correo | Contrasena |
-| --- | --- | --- |
-| Administrador | `admin@siger.edu` | `Admin123!` |
-| Organizador | `organizador@siger.edu` | `Organizador123!` |
-| Participante | `carlos@siger.edu` | `Carlos123!` |
+- `GET /reports/export?format=CSV|EXCEL|PDF`: genera y persiste un reporte descargable según el ámbito del usuario.
+- `GET /notifications`: notificaciones internas del usuario.
+- `PATCH /notifications/:id/read`: marca una notificación como leída.
+- `POST /notifications/process-pending`: intenta entregar por SMTP las notificaciones pendientes; requiere configuración SMTP y rol administrador.
 
 ## Persistencia
 
 La API usa repositorios SQLAlchemy y MariaDB. Los datos sobreviven al reinicio. El JWT usa HS256 con expiración y las contraseñas usan scrypt con sal.
+
+Las notificaciones se guardan aunque SMTP no esté configurado. En ese caso permanecen pendientes y la API devuelve un error explícito al intentar entregarlas; no se anuncian correos enviados.
+
+Alembic crea las siete tablas del diseño: `usuarios`, `categorias`, `eventos`, `reservaciones`, `asistencias`, `notificaciones` y `reportes`. La migración `0002` transforma el esquema temporal anterior si encuentra sus tablas, sin reinicializar la base.
 
 ## Docker
 

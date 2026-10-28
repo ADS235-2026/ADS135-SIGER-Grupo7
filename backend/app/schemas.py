@@ -28,6 +28,7 @@ class EventInput(BaseModel):
     location: str = Field(min_length=1, max_length=180)
     capacity: int = Field(gt=0, le=100000)
     status: str = "Borrador"
+    categoryId: int | None = None
     image: str = ""
     description: str = ""
 

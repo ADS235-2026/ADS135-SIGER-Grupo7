@@ -7,6 +7,13 @@ class Settings(BaseSettings):
     jwt_expires_minutes: int = 480
     frontend_origin: str = "http://localhost:8081,http://localhost:3000"
     port: int = 4000
+    timezone: str = "America/El_Salvador"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_tls: bool = True
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
