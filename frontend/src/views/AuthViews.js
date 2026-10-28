@@ -40,7 +40,7 @@ export function AuthScreen({ mode, setView, onSubmit, loading }) {
         {!isLogin && <label>Nombre completo<input value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="María López" /></label>}
         <label>Correo institucional<input value={form.email} onChange={(event) => update('email', event.target.value)} placeholder="usuario@siger.edu" type="email" /></label>
         <label>Contraseña<input value={form.password} onChange={(event) => update('password', event.target.value)} placeholder="••••••••" type="password" /></label>
-        {!isLogin && <label>Rol<select value={form.role} onChange={(event) => update('role', event.target.value)}><option value="participant">Participante</option><option value="organizer">Organizador</option></select></label>}
+        {!isLogin && <small className="auth-hint">El registro público crea cuentas de participante. Los demás roles los gestiona un administrador.</small>}
         <button className="primary-button full" disabled={loading} type="submit">
           {isLogin ? 'Entrar' : 'Crear cuenta'}
         </button>

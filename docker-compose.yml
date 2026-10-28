@@ -1,21 +1,33 @@
 services:
-  api:
-    build:
-      context: ./backend
+  db:
+    image: mariadb:11.4
     environment:
-      NODE_ENV: production
+      MARIADB_DATABASE: siger
+      MARIADB_USER: siger
+      MARIADB_PASSWORD: siger_password
+      MARIADB_ROOT_PASSWORD: siger_root_password
+    volumes: [siger-db:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  api:
+    build: {context: ./backend}
+    environment:
+      DATABASE_URL: mysql+pymysql://siger:siger_password@db:3306/siger
       PORT: 4000
-      JWT_SECRET: siger-local-docker-secret
-      FRONTEND_ORIGIN: http://localhost:8080
-    ports:
-      - "4000:4000"
-
+      JWT_SECRET: ${JWT_SECRET:-change-this-local-secret}
+      FRONTEND_ORIGIN: http://localhost:8081,http://localhost:3000
+    ports: ["4000:4000"]
+    depends_on:
+      db: {condition: service_healthy}
+    command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed && uvicorn app.main:app --host 0.0.0.0 --port 4000"]
   web:
-    build:
-      context: ./frontend
+    build: {context: ./frontend}
     environment:
       REACT_APP_API_URL: http://localhost:4000
-    ports:
-      - "8081:80"
-    depends_on:
-      - api
+    ports: ["8081:80"]
+    depends_on: [api]
+volumes:
+  siger-db:

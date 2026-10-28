@@ -1,38 +1,34 @@
 # SIGER Backend
 
-API de SIGER construida con NestJS. Expone autenticacion, eventos, reservaciones, asistencia, usuarios y reportes para el frontend React.
+API de SIGER construida con FastAPI. Expone autenticación, eventos, reservaciones, asistencia, usuarios y reportes para el frontend React.
 
-## Scripts
+## Ejecución
 
 Desde `backend/`:
 
 ```bash
-npm install
-npm run start:dev
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head
+python -m scripts.seed
+uvicorn app.main:app --reload --port 4000
 ```
 
 La API escucha en `http://localhost:4000` por defecto.
 
-Comandos utiles:
-
-```bash
-npm run build
-npm run start:prod
-npm run test
-npm run test:e2e
-```
+Pruebas: `pytest -q`. La documentación interactiva está disponible en `/docs`.
 
 ## Variables de Entorno
 
 - `PORT`: puerto de la API. Por defecto `4000`.
-- `JWT_SECRET`: secreto para firmar tokens. En desarrollo usa un valor interno por defecto.
+- `JWT_SECRET`: secreto requerido para firmar tokens.
 - `FRONTEND_ORIGIN`: origen permitido por CORS. Puede recibir varios origenes separados por coma.
 
 Ejemplo:
 
 ```bash
 PORT=4000
-JWT_SECRET=siger-local-secret
+JWT_SECRET=replace-with-a-long-random-secret
 FRONTEND_ORIGIN=http://localhost:8081,http://localhost:3000
 ```
 
@@ -68,11 +64,11 @@ Protegidos:
 
 ## Persistencia
 
-La API usa datos en memoria para el prototipo academico. Los usuarios, eventos y reservaciones creadas durante la ejecucion se pierden al reiniciar el proceso. Para una version productiva se recomienda agregar PostgreSQL y repositorios persistentes.
+La API usa repositorios SQLAlchemy y MariaDB. Los datos sobreviven al reinicio. El JWT usa HS256 con expiración y las contraseñas usan scrypt con sal.
 
 ## Docker
 
-Desde la raiz del repositorio:
+Desde la raíz del repositorio:
 
 ```bash
 docker compose up --build api

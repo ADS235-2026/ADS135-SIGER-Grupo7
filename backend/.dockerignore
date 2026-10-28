@@ -1,8 +1,9 @@
-node_modules
-dist
-coverage
-npm-debug.log
+__pycache__
+*.pyc
+*.db
+*.sqlite
+.venv
 .env
-.env.*
-Dockerfile
-.dockerignore
+.pytest_cache
+.git
+.gitignore

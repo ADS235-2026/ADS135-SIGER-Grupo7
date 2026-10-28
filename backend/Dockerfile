@@ -1,20 +1,7 @@
-FROM node:24-alpine AS deps
+FROM python:3.12-slim
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-
-FROM node:24-alpine AS build
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN npm run build
-RUN npm prune --omit=dev
-
-FROM node:24-alpine AS runtime
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package*.json ./
 EXPOSE 4000
-CMD ["node", "dist/main.js"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "4000"]

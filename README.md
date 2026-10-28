@@ -15,7 +15,7 @@ Sistema Inteligente de Gestion de Eventos y Reservaciones. SIGER es una platafor
 
 ```text
 SIGER/
-  backend/             API NestJS
+  backend/             API FastAPI
   frontend/            Aplicacion React servida por Nginx en Docker
   docker-compose.yml   Entorno local con API y frontend
   render.yaml          Blueprint para desplegar en Render
@@ -25,9 +25,9 @@ SIGER/
 ## Stack Tecnologico
 
 - Frontend: React 19, Create React App, CSS modular por convencion de clases.
-- Backend: NestJS 11 sobre Node.js.
+- Backend: FastAPI sobre Python, SQLAlchemy, Alembic y MariaDB.
 - Deploy: Docker, Docker Compose y Render Blueprint.
-- Persistencia actual: memoria en la API para fines de prototipo.
+- Persistencia: MariaDB mediante SQLAlchemy; el volumen `siger-db` conserva los datos al reiniciar.
 
 ## Ejecucion Local con Docker
 
@@ -53,6 +53,16 @@ Para detenerlos:
 ```bash
 docker compose down
 ```
+
+## Comandos con mise
+
+Con [mise](https://mise.jdx.dev/) instalado, el flujo principal es:
+
+```bash
+mise dev
+```
+
+También están disponibles `mise test`, `mise migrate`, `mise seed`, `mise logs`, `mise up` y `mise down`.
 
 ## Usuarios de Prueba
 
@@ -92,6 +102,9 @@ Pasos:
 
 Mas detalle en `DEPLOY_RENDER.md`.
 
-## Estado Actual
+## Desarrollo y pruebas
 
-SIGER funciona como prototipo completo para la presentacion academica. La API guarda datos en memoria, por lo que usuarios, eventos y reservaciones creadas durante la ejecucion se reinician cuando el servicio vuelve a iniciar. El siguiente paso natural para produccion seria agregar PostgreSQL y una capa de persistencia.
+Desde `backend/`: `python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt`.
+Aplicar migraciones con `alembic upgrade head`, cargar datos sintéticos con `python -m scripts.seed` y ejecutar pruebas con `pytest -q`.
+
+El frontend conserva las rutas y nombres de campos del prototipo. Los eventos borrador se excluyen del catálogo del participante y los errores HTTP se muestran mediante el aviso existente. Notificaciones externas, exportaciones y comprobantes descargables no estaban implementados, por lo que no se simulan.
