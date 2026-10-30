@@ -28,6 +28,7 @@ SIGER/
 - Backend: FastAPI sobre Python, SQLAlchemy, Alembic y MariaDB.
 - Deploy: Docker, Docker Compose y Render Blueprint.
 - Persistencia: MariaDB mediante SQLAlchemy; el volumen `siger-db` conserva los datos al reiniciar.
+- Entrega SQL: [`backend/sql/siger.sql`](backend/sql/siger.sql) contiene el esquema relacional ejecutable para MariaDB.
 
 ## Ejecucion Local con Docker
 

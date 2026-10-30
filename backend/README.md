@@ -71,6 +71,18 @@ Las notificaciones se guardan aunque SMTP no esté configurado. En ese caso perm
 
 Alembic crea las siete tablas del diseño y `lista_espera`: `usuarios`, `categorias`, `eventos`, `reservaciones`, `asistencias`, `notificaciones`, `reportes` y `lista_espera`. La migración `0002` transforma el esquema temporal anterior si encuentra sus tablas, sin reinicializar la base; `0003` agrega la lista de espera.
 
+### Script SQL para entrega académica
+
+El esquema también está disponible como SQL ejecutable en [`backend/sql/siger.sql`](sql/siger.sql). Es equivalente al modelo ORM e incluye tablas, relaciones, restricciones, índices y categorías base.
+
+Para cargarlo manualmente en MariaDB:
+
+```bash
+mariadb -u siger -p siger < backend/sql/siger.sql
+```
+
+En el flujo normal del proyecto se recomienda continuar usando `alembic upgrade head`, porque Alembic conserva el historial de cambios del esquema.
+
 ## Docker
 
 Desde la raíz del repositorio:
