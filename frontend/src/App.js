@@ -21,7 +21,7 @@ function App() {
   const [selectedEvent, setSelectedEvent] = useState(seedEvents[0]);
   const [category, setCategory] = useState('Todos');
   const [query, setQuery] = useState('');
-  const [reservedEvent, setReservedEvent] = useState(null);
+  const [reservedReservation, setReservedReservation] = useState(null);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -145,7 +145,7 @@ function App() {
         method: 'POST',
         body: JSON.stringify({ eventId: event.id }),
       });
-      setReservedEvent(reservation.eventDetail || event);
+      setReservedReservation(reservation);
       setReservations((items) => [reservation, ...items.filter((item) => item.reservationId !== reservation.reservationId)]);
       setEvents(await api('/events'));
       setView('confirmation');
@@ -175,14 +175,14 @@ function App() {
     }
   };
 
-  const checkIn = async (reservationId) => {
+  const checkIn = async (reservationId, eventId) => {
     setLoading(true);
     setNotice('');
 
     try {
       const checked = await api('/attendance/check-in', {
         method: 'POST',
-        body: JSON.stringify({ reservationId }),
+        body: JSON.stringify({ reservationId, eventId }),
       });
       setReservations((items) =>
         items.map((reservation) => (reservation.id === checked.id ? checked : reservation)),
@@ -299,7 +299,7 @@ function App() {
           {view === 'security' && <Security changePassword={changePassword} loading={loading} />}
           {view === 'create' && <CreateEvent createEvent={createEvent} loading={loading} />}
           {view === 'edit' && <CreateEvent initialEvent={selectedEvent} createEvent={updateEvent} saveLabel="Guardar cambios" loading={loading} />}
-          {view === 'confirmation' && <Confirmation event={reservedEvent || selectedEvent} setView={setView} />}
+          {view === 'confirmation' && <Confirmation event={reservedReservation?.eventDetail || selectedEvent} reservation={reservedReservation} setView={setView} />}
           {view === 'login' && <AuthScreen mode="login" setView={setView} onSubmit={handleAuth} loading={loading} />}
           {view === 'register' && <AuthScreen mode="register" setView={setView} onSubmit={handleAuth} loading={loading} />}
         </main>

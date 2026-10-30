@@ -95,6 +95,23 @@ def test_attendance_is_once_and_cancel_is_blocked(client):
     assert client.post("/attendance/check-in", headers=owner, json={"reservationId":reservation["id"]}).status_code == 409
     assert client.post(f"/reservations/{reservation['id']}/cancel", headers=owner).status_code == 409
 
+def test_cancelled_reservation_cannot_check_in_or_appear_in_attendance(client):
+    participant = login(client)
+    reservation = client.post("/reservations", headers=participant, json={"eventId":1}).json()
+    assert client.post(f"/reservations/{reservation['id']}/cancel", headers=participant).status_code == 200
+    owner = login(client, "owner@test.com", "Owner123!")
+    check_in = client.post("/attendance/check-in", headers=owner, json={"reservationId":reservation["id"]})
+    assert check_in.status_code == 400
+    attendance = client.get("/attendance/1", headers=owner)
+    assert attendance.status_code == 200 and all(row["id"] != reservation["id"] for row in attendance.json())
+
+def test_check_in_rejects_receipt_for_another_event(client):
+    participant = login(client)
+    reservation = client.post("/reservations", headers=participant, json={"eventId":1}).json()
+    owner = login(client, "owner@test.com", "Owner123!")
+    response = client.post("/attendance/check-in", headers=owner, json={"reservationId":reservation["id"], "eventId":999})
+    assert response.status_code == 400
+
 def test_concurrent_last_cup_allows_only_one(client):
     def reserve(email):
         return client.post("/reservations", headers=login(client, email, "Guest123!"), json={"eventId": 1}).status_code

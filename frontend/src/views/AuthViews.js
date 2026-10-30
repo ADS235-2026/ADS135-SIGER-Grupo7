@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../components/common';
 
-export function Confirmation({ event, setView }) {
+export function Confirmation({ event, reservation, setView }) {
   return (
     <section className="confirmation">
       <div className="confirmation-card">
@@ -9,7 +9,7 @@ export function Confirmation({ event, setView }) {
         <span className="eyebrow">Reservación Confirmada</span>
         <h1>{event.title}</h1>
         <p>Tu pase digital fue generado correctamente. Presenta el código de reservación en el acceso del evento.</p>
-        <div className="ticket-code">SIGER-{event.id}048</div>
+        <div className="ticket-code">{reservation?.id || 'Comprobante pendiente'}</div>
         <button className="primary-button" onClick={() => setView('reservations')} type="button">Ver mis reservaciones</button>
       </div>
     </section>

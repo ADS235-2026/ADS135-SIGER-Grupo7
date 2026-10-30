@@ -46,7 +46,7 @@ export function Attendance({ reservations, checkIn, loading }) {
             Código de reservación
             <input value={reservationId} onChange={(event) => setReservationId(event.target.value.toUpperCase())} placeholder="RSV-1048" />
           </label>
-          <button className="primary-button" disabled={loading || !selectedReservation || selectedReservation.checkedIn} onClick={() => checkIn(reservationId)} type="button">
+          <button className="primary-button" disabled={loading || !selectedReservation || selectedReservation.checkedIn} onClick={() => checkIn(reservationId, selectedReservation?.eventId)} type="button">
             <Icon name="how_to_reg" />
             Registrar ingreso
           </button>
@@ -59,7 +59,7 @@ export function Attendance({ reservations, checkIn, loading }) {
             <strong className={reservation.checkedIn ? 'good' : 'warning'}>
               {reservation.checkedIn ? 'Ingresó' : 'Pendiente'}
             </strong>
-            <button className="ghost-button" disabled={loading || reservation.checkedIn} onClick={() => checkIn(reservation.id)} type="button">
+            <button className="ghost-button" disabled={loading || reservation.checkedIn} onClick={() => checkIn(reservation.id, reservation.eventId)} type="button">
               Check-in
             </button>
           </div>

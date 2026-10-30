@@ -86,7 +86,7 @@ def attendance_check(data: dict, db: Session = Depends(get_db), user: User = Dep
 def attendance_list(event_id: int, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "organizer"))):
     event_row = db.get(Event, event_id)
     if not event_row or (api_role(user.role) == "organizer" and event_row.organizer_id != user.id): raise HTTPException(404, "Evento no encontrado")
-    return [reservation_out(r) for r in event_row.reservations]
+    return [reservation_out(r) for r in event_row.reservations if r.state in ACTIVE_RESERVATIONS]
 
 @router.get("/reports/summary", tags=["reports"])
 def reports(db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "organizer"))):
