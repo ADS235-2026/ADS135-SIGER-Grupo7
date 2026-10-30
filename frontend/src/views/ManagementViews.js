@@ -3,9 +3,93 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { EmptyState, Icon, Metric, PageHeader, Panel } from '../components/common';
 import { formatDate, formatTime, roleLabel } from '../utils/formatters';
 
+const calendarWeekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+function dateKey(date) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+}
+
+function ReservationCalendar({ reservations, selectedDate, onSelect }) {
+  const firstDate = reservations[0]?.date || new Date().toISOString().slice(0, 10);
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const date = new Date(`${firstDate}T00:00:00`);
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  });
+  const monthLabel = new Intl.DateTimeFormat('es-SV', { month: 'long', year: 'numeric' }).format(visibleMonth);
+  const firstDayOffset = (visibleMonth.getDay() + 6) % 7;
+  const daysInMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 0).getDate();
+  const cells = Array.from({ length: 42 }, (_, index) => {
+    const dayNumber = index - firstDayOffset + 1;
+    const date = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), dayNumber);
+    return { date, dayNumber, inMonth: dayNumber > 0 && dayNumber <= daysInMonth, key: dateKey(date) };
+  });
+  const reservationsByDate = reservations.reduce((groups, reservation) => {
+    groups[reservation.date] = [...(groups[reservation.date] || []), reservation];
+    return groups;
+  }, {});
+
+  return (
+    <div className="reservation-calendar">
+      <div className="reservation-calendar-header">
+        <div><span className="eyebrow">Agenda</span><strong>{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</strong></div>
+        <div className="calendar-controls">
+          <button className="icon-button" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))} type="button" aria-label="Mes anterior"><Icon name="chevron_left" /></button>
+          <button className="icon-button" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))} type="button" aria-label="Mes siguiente"><Icon name="chevron_right" /></button>
+        </div>
+      </div>
+      <div className="calendar-weekdays">{calendarWeekDays.map((day) => <span key={day}>{day}</span>)}</div>
+      <div className="calendar-grid">
+        {cells.map(({ date, dayNumber, inMonth, key }) => {
+          const dayReservations = reservationsByDate[key] || [];
+          return (
+            <button
+              className={`calendar-day ${inMonth ? '' : 'outside-month'} ${selectedDate === key ? 'selected' : ''} ${dayReservations.length ? 'has-reservations' : ''}`}
+              key={key}
+              onClick={() => inMonth && onSelect(selectedDate === key ? '' : key)}
+              type="button"
+              disabled={!inMonth}
+              aria-label={`${dayNumber} de ${monthLabel}${dayReservations.length ? `, ${dayReservations.length} reservaciones` : ''}`}
+            >
+              <span>{date.getDate()}</span>
+              {dayReservations.length > 0 && <small>{dayReservations.length}</small>}
+            </button>
+          );
+        })}
+      </div>
+      {selectedDate && <button className="text-button calendar-clear" onClick={() => onSelect('')} type="button">Ver todas las reservaciones</button>}
+    </div>
+  );
+}
+
 export function Reservations({ reservations, cancelReservation, reserve, setView, openTicket, currentUser, loading }) {
   const isParticipant = currentUser?.role === 'participant';
   const activeReservations = reservations.filter((reservation) => reservation.state !== 'Cancelada');
+  const [selectedDate, setSelectedDate] = useState('');
+  const visibleReservations = selectedDate ? reservations.filter((reservation) => reservation.date === selectedDate) : reservations;
+  const reservationList = (
+    <>
+      <div className="reservation-list">
+        {visibleReservations.map((reservation) => (
+          <article className={`reservation-card ${reservation.state === 'Cancelada' ? 'reservation-cancelled' : ''}`} key={reservation.id}>
+            <div className="reservation-card-header"><div><span className="eyebrow">Evento</span><strong>{reservation.event}</strong></div><em className={reservation.state === 'Confirmada' ? 'good' : reservation.state === 'Cancelada' ? 'danger' : 'warning'}>{reservation.state}</em></div>
+            <div className="reservation-card-details"><span><Icon name="calendar_today" /><b>{formatDate(reservation.date)}</b>{reservation.eventDetail?.time && ` · ${reservation.eventDetail.time.slice(0, 5)}`}</span><span><Icon name="location_on" />{reservation.eventDetail?.location || 'Ubicación pendiente'}</span></div>
+            <div className="reservation-card-footer"><small>Comprobante: <strong>{reservation.id}</strong></small><small>{reservation.state === 'Confirmada' ? 'Pase listo para usar' : reservation.state === 'Cancelada' ? 'Cupo disponible nuevamente' : 'Pendiente de confirmación'}</small><div className="table-actions">
+              {isParticipant && reservation.state === 'Confirmada' && <button className="text-button" onClick={() => openTicket(reservation)} type="button">Ver pase</button>}
+              {reservation.state === 'Confirmada' && !reservation.checkedIn && <button className="ghost-button" disabled={loading} onClick={() => cancelReservation(reservation)} type="button">Cancelar</button>}
+              {isParticipant && reservation.state === 'Cancelada' && <button className="primary-button" disabled={loading} onClick={() => reserve(reservation.eventDetail)} type="button">Reactivar</button>}
+            </div></div>
+          </article>
+        ))}
+      </div>
+      {visibleReservations.length === 0 && (
+        <EmptyState
+          iconName="confirmation_number"
+          title={isParticipant ? 'Todavía no tienes planes guardados' : 'No hay reservaciones en este día'}
+          description={isParticipant ? 'Cuando encuentres un evento que te guste, tu pase aparecerá aquí.' : 'Selecciona otra fecha en el calendario para consultar su actividad.'}
+        />
+      )}
+    </>
+  );
 
   return (
     <section className="page-stack">
@@ -15,29 +99,57 @@ export function Reservations({ reservations, cancelReservation, reserve, setView
         <div><span>Reservaciones canceladas</span><strong>{reservations.length - activeReservations.length}</strong></div>
         {isParticipant && <button className="ghost-button" onClick={() => setView('events')} type="button"><Icon name="calendar_month" />Explorar eventos</button>}
       </div>
-      <Panel title={isParticipant ? 'Tus pases' : 'Reservaciones del equipo'}>
-        <div className="reservation-list">
-          {reservations.map((reservation) => (
-            <article className={`reservation-card ${reservation.state === 'Cancelada' ? 'reservation-cancelled' : ''}`} key={reservation.id}>
-              <div className="reservation-card-header"><div><span className="eyebrow">Evento</span><strong>{reservation.event}</strong></div><em className={reservation.state === 'Confirmada' ? 'good' : reservation.state === 'Cancelada' ? 'danger' : 'warning'}>{reservation.state}</em></div>
-              <div className="reservation-card-details"><span><Icon name="calendar_today" /><b>{formatDate(reservation.date)}</b>{reservation.eventDetail?.time && ` · ${reservation.eventDetail.time.slice(0, 5)}`}</span><span><Icon name="location_on" />{reservation.eventDetail?.location || 'Ubicación pendiente'}</span></div>
-              <div className="reservation-card-footer"><small>Comprobante: <strong>{reservation.id}</strong></small><small>{reservation.state === 'Confirmada' ? 'Pase listo para usar' : reservation.state === 'Cancelada' ? 'Cupo disponible nuevamente' : 'Pendiente de confirmación'}</small><div className="table-actions">
-                {isParticipant && reservation.state === 'Confirmada' && <button className="text-button" onClick={() => openTicket(reservation)} type="button">Ver pase</button>}
-                {reservation.state === 'Confirmada' && !reservation.checkedIn && <button className="ghost-button" disabled={loading} onClick={() => cancelReservation(reservation)} type="button">Cancelar</button>}
-                {isParticipant && reservation.state === 'Cancelada' && <button className="primary-button" disabled={loading} onClick={() => reserve(reservation.eventDetail)} type="button">Reactivar</button>}
-              </div></div>
-            </article>
-          ))}
-        </div>
-        {reservations.length === 0 && (
-          <EmptyState
-            iconName="confirmation_number"
-            title="Todavía no tienes planes guardados"
-            description="Cuando encuentres un evento que te guste, tu pase aparecerá aquí."
-          />
-        )}
+      <Panel title={isParticipant ? 'Tus pases' : 'Agenda y detalle'}>
+        {!isParticipant && reservations.length > 0 ? (
+          <div className="reservation-planner">
+            <ReservationCalendar reservations={reservations} selectedDate={selectedDate} onSelect={setSelectedDate} />
+            <section className="reservation-detail-panel" aria-label="Detalle de reservaciones">
+              <div className="reservation-list-heading"><div><span className="eyebrow">Detalle operativo</span><strong>{selectedDate ? `Reservaciones del ${formatDate(selectedDate)}` : 'Todas las reservaciones'}</strong></div>{selectedDate && <button className="text-button" onClick={() => setSelectedDate('')} type="button">Ver todas</button>}</div>
+              {reservationList}
+            </section>
+          </div>
+        ) : reservationList}
       </Panel>
     </section>
+  );
+}
+
+function EventFilter({ options, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = value === 'all'
+    ? 'Todos los eventos'
+    : options.find(([id]) => String(id) === value)?.[1] || 'Todos los eventos';
+
+  return (
+    <div className="event-filter">
+      <button
+        className="event-filter-trigger"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        <span>{selectedLabel}</span>
+        <Icon name={open ? 'expand_less' : 'expand_more'} />
+      </button>
+      {open && (
+        <div className="event-filter-menu" role="listbox" aria-label="Filtrar por evento">
+          {[['all', 'Todos los eventos'], ...options].map(([id, label]) => (
+            <button
+              className={`event-filter-option ${String(id) === String(value) ? 'selected' : ''}`}
+              key={id}
+              onClick={() => { onChange(String(id)); setOpen(false); }}
+              role="option"
+              aria-selected={String(id) === String(value)}
+              type="button"
+            >
+              <span>{label}</span>
+              {String(id) === String(value) && <Icon name="check" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -99,27 +211,26 @@ export function Attendance({ reservations, checkIn, loading }) {
       {cameraOpen && <div className="qr-modal-backdrop" role="presentation"><section className="qr-modal" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title"><div className="qr-modal-header"><div><span className="eyebrow">Acceso</span><h2 id="qr-modal-title">Escanea el pase del participante</h2></div><button className="icon-button" onClick={() => setCameraOpen(false)} type="button" aria-label="Cerrar escáner"><Icon name="close" /></button></div><p>Centra el código QR dentro del recuadro. La validación se hará contra el evento seleccionado.</p><div id="qr-reader" className="qr-reader" aria-label="Lector de código QR" /><small className="scan-message">{scanMessage || 'Solicita permiso para usar la cámara si el navegador lo pide.'}</small><button className="ghost-button" onClick={() => setCameraOpen(false)} type="button">Usar entrada manual</button></section></div>}
       <Panel title="Validar un pase" className="scanner-panel">
         <div className="scanner-box">
-          <span className="scanner-icon"><Icon name="confirmation_number" /></span>
-          <span className="eyebrow">Validación manual</span>
-          <strong>{selectedReservation?.id || 'Sin comprobante seleccionado'}</strong>
-          <small>{selectedReservation ? `${selectedReservation.guest} · ${selectedReservation.event}` : 'Busca un comprobante para registrar la llegada'}</small>
-          <label className="scanner-input">
-            Código de reservación
-            <input value={reservationId} onChange={(event) => setReservationId(event.target.value.toUpperCase())} placeholder="RSV-1048" aria-label="Código de reservación" />
-          </label>
-          {scanMessage && <small className="scan-message">{scanMessage}</small>}
-          <small className="scanner-helper">También puedes escribir el comprobante manualmente si el participante no puede mostrar su QR.</small>
-          <button className="primary-button full" disabled={loading || !selectedReservation || selectedReservation.checkedIn} onClick={() => checkIn(reservationId, selectedReservation?.eventId)} type="button">
+          <div className="scanner-box-content">
+            <span className="scanner-icon"><Icon name="confirmation_number" /></span>
+            <span className="eyebrow">Validación manual</span>
+            <strong>{selectedReservation?.id || 'Sin comprobante seleccionado'}</strong>
+            <small>{selectedReservation ? `${selectedReservation.guest} · ${selectedReservation.event}` : 'Busca un comprobante para registrar la llegada'}</small>
+            <label className="scanner-input">
+              Código de reservación
+              <input value={reservationId} onChange={(event) => setReservationId(event.target.value.toUpperCase())} placeholder="RSV-1048" aria-label="Código de reservación" />
+            </label>
+            {scanMessage && <small className="scan-message">{scanMessage}</small>}
+            <small className="scanner-helper">También puedes escribir el comprobante manualmente si el participante no puede mostrar su QR.</small>
+          </div>
+          <button className="primary-button scanner-confirm-button" disabled={loading || !selectedReservation || selectedReservation.checkedIn} onClick={() => checkIn(reservationId, selectedReservation?.eventId)} type="button">
             <Icon name="how_to_reg" />{selectedReservation?.checkedIn ? 'Ingreso registrado' : 'Confirmar llegada'}
           </button>
         </div>
       </Panel>
       <Panel title={`Asistentes${eventFilter === 'all' ? '' : ` · ${eventOptions.find(([id]) => String(id) === eventFilter)?.[1] || ''}`}`}>
         <div className="attendance-filters">
-          <select value={eventFilter} onChange={(event) => setEventFilter(event.target.value)} aria-label="Filtrar por evento">
-            <option value="all">Todos los eventos</option>
-            {eventOptions.map(([id, title]) => <option key={id} value={id}>{title}</option>)}
-          </select>
+          <EventFilter options={eventOptions} value={eventFilter} onChange={setEventFilter} />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar nombre o comprobante" aria-label="Buscar asistente" />
         </div>
         <div className="attendance-list">

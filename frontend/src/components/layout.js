@@ -1,7 +1,33 @@
+import { Fragment, useEffect, useState } from 'react';
 import { Icon } from './common';
 import { roleLabel } from '../utils/formatters';
 
 export function Sidebar({ view, setView, items, logout, currentUser }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const mobilePrimaryCount = items.length > 7 ? 5 : 4;
+  const mobilePrimaryItems = items.slice(0, mobilePrimaryCount);
+  const mobileExtraItems = items.slice(mobilePrimaryCount);
+  const extraViewIsActive = mobileExtraItems.some((item) => item.id === view);
+  useEffect(() => {
+    if (extraViewIsActive) setMoreOpen(true);
+  }, [extraViewIsActive]);
+
+  const navigate = (nextView) => {
+    setMoreOpen(false);
+    setView(nextView);
+  };
+  const renderNavItem = (item) => (
+    <button
+      className={`nav-item ${view === item.id ? 'active' : ''}`}
+      key={item.id}
+      onClick={() => navigate(item.id)}
+      type="button"
+    >
+      <Icon name={item.icon} />
+      <span>{item.label}</span>
+    </button>
+  );
+
   return (
     <aside className="sidebar">
       <button className="brand" onClick={() => setView('dashboard')} type="button">
@@ -11,19 +37,29 @@ export function Sidebar({ view, setView, items, logout, currentUser }) {
           <small>Gestión Inteligente</small>
         </span>
       </button>
-      <nav className="nav-list" aria-label="Navegación principal">
-        {items.map((item) => (
-          <button
-            className={`nav-item ${view === item.id ? 'active' : ''}`}
-            key={item.id}
-            onClick={() => setView(item.id)}
-            type="button"
-          >
-            <Icon name={item.icon} />
-            <span>{item.label}</span>
-          </button>
+      <nav className="nav-list desktop-nav-list" aria-label="Navegación principal">
+        {items.map((item, index) => (
+          <Fragment key={item.id}>
+            {item.group !== items[index - 1]?.group && <span className="nav-section-label">{item.group}</span>}
+            {renderNavItem(item)}
+          </Fragment>
         ))}
       </nav>
+      <nav className="nav-list mobile-nav-list" aria-label="Navegación móvil">
+        {mobilePrimaryItems.map(renderNavItem)}
+        <button className={`nav-item mobile-more-button ${moreOpen ? 'active' : ''}`} onClick={() => setMoreOpen((open) => !open)} type="button" aria-expanded={moreOpen} aria-controls="mobile-more-panel">
+          <Icon name={moreOpen ? 'close' : 'more_horiz'} />
+          <span>Más</span>
+        </button>
+      </nav>
+      {moreOpen && (
+        <div className="mobile-more-panel" id="mobile-more-panel" role="dialog" aria-label="Más opciones de navegación">
+          <span className="mobile-more-title">Más opciones</span>
+          {mobileExtraItems.map(renderNavItem)}
+          {currentUser?.role !== 'participant' && <button className="ghost-button full" onClick={() => navigate('create')} type="button"><Icon name="add" />Crear evento</button>}
+          <button className="ghost-button full" onClick={() => { setMoreOpen(false); logout(); }} type="button"><Icon name="logout" />Cerrar sesión</button>
+        </div>
+      )}
       <div className="sidebar-footer">
         {currentUser?.role !== 'participant' && (
           <button className="primary-button full" onClick={() => setView('create')} type="button">

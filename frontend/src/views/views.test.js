@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { AuthScreen } from './AuthViews';
 import { Catalog, EventDetail } from './EventViews';
+import { navItems } from '../data/seedData';
 
 const event = {
   id: 1,
@@ -38,4 +39,12 @@ test('un evento cerrado no ofrece una reserva inválida', () => {
   render(<EventDetail event={{ ...event, status: 'Cancelado' }} reserve={() => {}} joinWaitlist={() => {}} loading={false} canManage={false} />);
   expect(screen.getByText('Este evento ya no está disponible')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /confirmar reservación/i })).not.toBeInTheDocument();
+});
+
+test('la navegación prioriza tareas y deja la cuenta al final', () => {
+  const participantItems = navItems.filter((item) => item.roles.includes('participant')).map((item) => item.id);
+  const adminItems = navItems.filter((item) => item.roles.includes('admin')).map((item) => item.id);
+
+  expect(participantItems).toEqual(['dashboard', 'events', 'reservations', 'waitlist', 'notifications', 'profile', 'security']);
+  expect(adminItems).toEqual(['dashboard', 'events', 'reservations', 'organizer', 'attendance', 'reports', 'users', 'notifications', 'profile', 'security']);
 });

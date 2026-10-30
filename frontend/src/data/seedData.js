@@ -1,17 +1,17 @@
 export const TOKEN_KEY = 'siger_token';
 
 export const navItems = [
-  { id: 'notifications', label: 'Notificaciones', icon: 'notifications', roles: ['admin', 'organizer', 'participant'] },
-  { id: 'security', label: 'Seguridad', icon: 'lock', roles: ['admin', 'organizer', 'participant'] },
-  { id: 'waitlist', label: 'Lista de espera', icon: 'hourglass_top', roles: ['participant'] },
-  { id: 'profile', label: 'Mi perfil', icon: 'account_circle', roles: ['admin', 'organizer', 'participant'] },
-  { id: 'dashboard', label: 'Panel de Control', icon: 'dashboard', roles: ['admin', 'organizer'] },
-  { id: 'organizer', label: 'Organizador', icon: 'event_available', roles: ['admin', 'organizer'] },
-  { id: 'events', label: 'Eventos', icon: 'calendar_month', roles: ['admin', 'organizer', 'participant'] },
-  { id: 'reservations', label: 'Reservaciones', icon: 'book_online', roles: ['admin', 'organizer', 'participant'] },
-  { id: 'attendance', label: 'Asistencia', icon: 'fact_check', roles: ['admin', 'organizer'] },
-  { id: 'users', label: 'Usuarios', icon: 'group', roles: ['admin'] },
-  { id: 'reports', label: 'Reportes', icon: 'analytics', roles: ['admin', 'organizer'] },
+  { id: 'dashboard', label: 'Inicio', icon: 'dashboard', group: 'Principal', roles: ['admin', 'organizer', 'participant'] },
+  { id: 'events', label: 'Eventos', icon: 'calendar_month', group: 'Principal', roles: ['admin', 'organizer', 'participant'] },
+  { id: 'reservations', label: 'Reservaciones', icon: 'book_online', group: 'Principal', roles: ['admin', 'organizer', 'participant'] },
+  { id: 'waitlist', label: 'Lista de espera', icon: 'hourglass_top', group: 'Principal', roles: ['participant'] },
+  { id: 'organizer', label: 'Organizador', icon: 'event_available', group: 'Operación', roles: ['admin', 'organizer'] },
+  { id: 'attendance', label: 'Asistencia', icon: 'fact_check', group: 'Operación', roles: ['admin', 'organizer'] },
+  { id: 'reports', label: 'Reportes', icon: 'analytics', group: 'Operación', roles: ['admin', 'organizer'] },
+  { id: 'users', label: 'Usuarios', icon: 'group', group: 'Operación', roles: ['admin'] },
+  { id: 'notifications', label: 'Notificaciones', icon: 'notifications', group: 'Cuenta', roles: ['admin', 'organizer', 'participant'] },
+  { id: 'profile', label: 'Mi perfil', icon: 'account_circle', group: 'Cuenta', roles: ['admin', 'organizer', 'participant'] },
+  { id: 'security', label: 'Seguridad', icon: 'lock', group: 'Cuenta', roles: ['admin', 'organizer', 'participant'] },
 ];
 
 export const seedEvents = [
