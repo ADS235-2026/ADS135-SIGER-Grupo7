@@ -4,6 +4,19 @@ import jwt
 from fastapi import HTTPException, status
 from .config import settings
 
+def validate_password(password: str) -> str:
+    if len(password) < 8 or len(password) > 128:
+        raise ValueError("La contraseña debe tener entre 8 y 128 caracteres")
+    if not any(char.islower() for char in password):
+        raise ValueError("La contraseña debe incluir una letra minúscula")
+    if not any(char.isupper() for char in password):
+        raise ValueError("La contraseña debe incluir una letra mayúscula")
+    if not any(char.isdigit() for char in password):
+        raise ValueError("La contraseña debe incluir un número")
+    if not any(not char.isalnum() for char in password):
+        raise ValueError("La contraseña debe incluir un carácter especial")
+    return password
+
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
     digest = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1)

@@ -40,6 +40,7 @@ Publicos:
 - `GET /` y `GET /health`: estado de la API.
 - `POST /auth/login`: inicio de sesion.
 - `POST /auth/register`: registro de usuario.
+- `POST /auth/change-password`: cambia la contraseña del usuario autenticado y devuelve un token nuevo.
 
 Protegidos:
 
@@ -61,7 +62,7 @@ Protegidos:
 
 ## Persistencia
 
-La API usa repositorios SQLAlchemy y MariaDB. Los datos sobreviven al reinicio. El JWT usa HS256 con expiración y las contraseñas usan scrypt con sal.
+La API usa repositorios SQLAlchemy y MariaDB. Los datos sobreviven al reinicio. El JWT usa HS256 con expiración y las contraseñas usan scrypt con sal. El registro y el cambio de contraseña exigen al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial. En producción se debe definir `ENVIRONMENT=production` y un `JWT_SECRET` aleatorio de al menos 32 caracteres.
 
 Las notificaciones se guardan aunque SMTP no esté configurado. En ese caso permanecen pendientes y la API devuelve un error explícito al intentar entregarlas; no se anuncian correos enviados.
 

@@ -2,14 +2,20 @@ import { useState } from 'react';
 import { EmptyState, Icon, Metric, PageHeader, Panel, ReservationRow } from '../components/common';
 import { roleLabel } from '../utils/formatters';
 
-export function Reservations({ reservations }) {
+export function Reservations({ reservations, cancelReservation, reserve, loading }) {
   return (
     <section className="page-stack">
       <PageHeader eyebrow="Participante" title="Mis Reservaciones" description="Consulta el estado de tus próximas asistencias y pases digitales." />
       <Panel title="Reservaciones recientes">
         <div className="table-list">
           {reservations.map((reservation) => (
-            <ReservationRow key={reservation.id} reservation={reservation} />
+            <div key={reservation.id}>
+              <ReservationRow reservation={reservation} />
+              <div className="button-pair table-actions">
+                {reservation.state === 'Confirmada' && !reservation.checkedIn && <button className="ghost-button" disabled={loading} onClick={() => cancelReservation(reservation)} type="button">Cancelar</button>}
+                {reservation.state === 'Cancelada' && <button className="primary-button" disabled={loading} onClick={() => reserve(reservation.eventDetail)} type="button">Reactivar</button>}
+              </div>
+            </div>
           ))}
         </div>
         {reservations.length === 0 && (
@@ -63,7 +69,7 @@ export function Attendance({ reservations, checkIn, loading }) {
   );
 }
 
-export function Users({ users }) {
+export function Users({ users, updateUser, loading }) {
   return (
     <section className="page-stack">
       <PageHeader eyebrow="Administración" title="Gestión de Usuarios" description="Roles, estados y accesos para administradores, organizadores y participantes." />
@@ -77,6 +83,9 @@ export function Users({ users }) {
               </div>
               <span>{roleLabel(user.role)}</span>
               <em className={user.state === 'Activo' ? 'good' : 'danger'}>{user.state}</em>
+              <button className="ghost-button" disabled={loading} onClick={() => updateUser(user.id, { state: user.state === 'Activo' ? 'Bloqueado' : 'Activo' })} type="button">
+                {user.state === 'Activo' ? 'Bloquear' : 'Activar'}
+              </button>
             </div>
           ))}
         </div>
@@ -85,13 +94,14 @@ export function Users({ users }) {
   );
 }
 
-export function Reports({ report }) {
+export function Reports({ report, downloadReport, loading }) {
   const categories = Object.entries(report.categories || {});
   const monthLabels = ['Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
   return (
     <section className="page-stack">
-      <PageHeader eyebrow="Analítica" title="Reportes y Estadísticas" description="Indicadores de ocupación, demanda por categoría y conversión de reservas." />
+      <PageHeader eyebrow="Analítica" title="Reportes y Estadísticas" description="Indicadores de ocupación, demanda por categoría y conversión de reservas."
+        action={<div className="button-pair"><button className="ghost-button" disabled={loading} onClick={() => downloadReport('CSV')} type="button">CSV</button><button className="ghost-button" disabled={loading} onClick={() => downloadReport('EXCEL')} type="button">Excel</button><button className="primary-button" disabled={loading} onClick={() => downloadReport('PDF')} type="button">PDF</button></div>} />
       <div className="metric-grid">
         <Metric iconName="event" label="Eventos monitoreados" value={report.activeEvents} trend="Calendario vigente" />
         <Metric iconName="verified" label="Reservas confirmadas" value={report.confirmedReservations} trend={`${report.reservations} solicitudes`} />
@@ -118,6 +128,62 @@ export function Reports({ report }) {
           ))}
         </Panel>
       </div>
+    </section>
+  );
+}
+
+export function Notifications({ notifications, markRead }) {
+  return (
+    <section className="page-stack">
+      <PageHeader eyebrow="Centro de actividad" title="Notificaciones" description="Consulta confirmaciones, cancelaciones y avisos de SIGER." />
+      <Panel title="Mensajes recientes">
+        <div className="table-list">
+          {notifications.map((notification) => (
+            <div className={`table-row ${notification.read ? '' : 'notification-unread'}`} key={notification.id}>
+              <div><strong>{notification.type}</strong><small>{notification.message}</small></div>
+              <span>{notification.sentAt ? 'Enviado' : 'Pendiente'}</span>
+              {!notification.read && <button className="ghost-button" onClick={() => markRead(notification)} type="button">Marcar leída</button>}
+            </div>
+          ))}
+        </div>
+        {notifications.length === 0 && <EmptyState iconName="notifications_off" title="Sin notificaciones" description="Aquí aparecerán las actualizaciones de tus reservas y eventos." />}
+      </Panel>
+    </section>
+  );
+}
+
+export function Security({ changePassword, loading }) {
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmation: '' });
+  const [error, setError] = useState('');
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setError('');
+    if (form.newPassword !== form.confirmation) {
+      setError('Las contraseñas nuevas no coinciden');
+      return;
+    }
+    try {
+      await changePassword(form.currentPassword, form.newPassword);
+      setForm({ currentPassword: '', newPassword: '', confirmation: '' });
+    } catch (changeError) {
+      setError(changeError.message);
+    }
+  };
+
+  return (
+    <section className="page-stack">
+      <PageHeader eyebrow="Cuenta" title="Seguridad" description="Actualiza tu contraseña y protege el acceso a tu cuenta." />
+      <Panel title="Cambiar contraseña">
+        <form className="auth-card security-form" onSubmit={submit}>
+          <label>Contraseña actual<input required value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} type="password" autoComplete="current-password" /></label>
+          <label>Nueva contraseña<input required minLength="8" value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} type="password" autoComplete="new-password" /></label>
+          <small className="auth-hint">Usa al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.</small>
+          <label>Confirmar nueva contraseña<input required minLength="8" value={form.confirmation} onChange={(event) => setForm({ ...form, confirmation: event.target.value })} type="password" autoComplete="new-password" /></label>
+          {error && <p className="danger">{error}</p>}
+          <button className="primary-button" disabled={loading} type="submit">Actualizar contraseña</button>
+        </form>
+      </Panel>
     </section>
   );
 }

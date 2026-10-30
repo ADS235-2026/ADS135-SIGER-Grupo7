@@ -1,6 +1,8 @@
 export const TOKEN_KEY = 'siger_token';
 
 export const navItems = [
+  { id: 'notifications', label: 'Notificaciones', icon: 'notifications', roles: ['admin', 'organizer', 'participant'] },
+  { id: 'security', label: 'Seguridad', icon: 'lock', roles: ['admin', 'organizer', 'participant'] },
   { id: 'dashboard', label: 'Panel de Control', icon: 'dashboard', roles: ['admin', 'organizer'] },
   { id: 'organizer', label: 'Organizador', icon: 'event_available', roles: ['admin', 'organizer'] },
   { id: 'events', label: 'Eventos', icon: 'calendar_month', roles: ['admin', 'organizer', 'participant'] },

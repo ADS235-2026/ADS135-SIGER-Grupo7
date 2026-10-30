@@ -40,7 +40,7 @@ export function Sidebar({ view, setView, items, logout, currentUser }) {
   );
 }
 
-export function Topbar({ query, setQuery, setView, currentUser }) {
+export function Topbar({ query, setQuery, setView, currentUser, unreadCount = 0 }) {
   return (
     <header className="topbar">
       <label className="search-field">
@@ -52,14 +52,14 @@ export function Topbar({ query, setQuery, setView, currentUser }) {
         />
       </label>
       <div className="topbar-actions">
-        <button className="icon-button" type="button" aria-label="Notificaciones">
+        <button className="icon-button" onClick={() => setView('notifications')} type="button" aria-label="Notificaciones">
           <Icon name="notifications" />
-          <span className="signal" />
+          {unreadCount > 0 && <span className="signal" />}
         </button>
         <button className="icon-button" type="button" aria-label="Ayuda">
           <Icon name="help_outline" />
         </button>
-        <button className="profile" onClick={() => setView('users')} type="button">
+        <button className="profile" onClick={() => setView('security')} type="button">
           <span>
             <strong>{currentUser?.name || 'SIGER'}</strong>
             <small>{roleLabel(currentUser?.role)}</small>

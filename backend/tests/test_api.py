@@ -51,6 +51,20 @@ def test_public_registration_cannot_elevate_role(client):
     ok = client.post("/auth/register", json={"name":"X", "email":"x@test.com", "password":"Password123!"})
     assert ok.status_code == 200 and ok.json()["user"]["role"] == "participant"
 
+def test_password_policy_and_change_password(client):
+    weak = client.post("/auth/register", json={"name":"Weak", "email":"weak@test.com", "password":"password"})
+    assert weak.status_code == 422
+    headers = login(client)
+    changed = client.post("/auth/change-password", headers=headers, json={"currentPassword":"Guest123!", "newPassword":"NewGuest456!"})
+    assert changed.status_code == 200
+    assert client.post("/auth/login", json={"email":"guest@test.com", "password":"Guest123!"}).status_code == 401
+    assert client.post("/auth/login", json={"email":"guest@test.com", "password":"NewGuest456!"}).status_code == 200
+
+def test_security_headers_are_present(client):
+    response = client.get("/health")
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+
 def test_jwt_auth_and_draft_isolation(client):
     headers = login(client)
     events = client.get("/events", headers=headers)
@@ -101,3 +115,23 @@ def test_notifications_are_persisted_and_export_is_real(client):
     for format_name, media_type in [("EXCEL", "spreadsheetml"), ("PDF", "application/pdf")]:
         response = client.get(f"/reports/export?format={format_name}", headers=organizer)
         assert response.status_code == 200 and media_type in response.headers["content-type"] and len(response.content) > 100
+
+def test_event_rules_reject_past_and_protect_capacity(client):
+    owner = login(client, "owner@test.com", "Owner123!")
+    past = client.post("/events", headers=owner, json={"title":"Past", "type":"Taller", "date":"2020-01-01", "time":"09:00", "location":"A", "capacity":2, "status":"Publicado"})
+    assert past.status_code == 400
+    created = client.post("/events", headers=owner, json={"title":"Capacity test", "type":"Taller", "date":"2027-01-01", "time":"09:00", "location":"A", "capacity":2, "status":"Publicado"}).json()
+    participant = login(client)
+    assert client.post("/reservations", headers=participant, json={"eventId":created["id"]}).status_code == 200
+    second = login(client, "guest2@test.com", "Guest123!")
+    assert client.post("/reservations", headers=second, json={"eventId":created["id"]}).status_code == 200
+    reduced = client.patch(f"/events/{created['id']}", headers=owner, json={"title":"Capacity test", "type":"Taller", "date":"2027-01-01", "time":"09:00", "location":"A", "capacity":1, "status":"Publicado"})
+    assert reduced.status_code == 400
+
+def test_event_can_be_rescheduled_and_cancelled_explicitly(client):
+    owner = login(client, "owner@test.com", "Owner123!")
+    moved = client.post("/events/1/reschedule", headers=owner, json={"date":"2027-02-01", "time":"11:30"})
+    assert moved.status_code == 200 and moved.json()["status"] == "Reprogramado"
+    canceled = client.post("/events/1/cancel", headers=owner)
+    assert canceled.status_code == 200 and canceled.json()["status"] == "Cancelado"
+    assert client.get("/events/1", headers=login(client)).status_code == 404

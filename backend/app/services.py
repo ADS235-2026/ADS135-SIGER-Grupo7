@@ -8,8 +8,8 @@ from .config import settings
 from .models import Attendance, Category, Event, Reservation, User
 from .notifications import add_notification
 from .repositories import EventRepository, ReservationRepository, UserRepository
-from .schemas import EventInput, RegisterInput, ReservationInput
-from .security import create_token, hash_password, verify_password
+from .schemas import EventInput, EventRescheduleInput, RegisterInput, ReservationInput
+from .security import create_token, hash_password, validate_password, verify_password
 
 ACTIVE_ROLES = {"administrador", "organizador", "participante"}
 ACTIVE_RESERVATIONS = {"confirmada", "pendiente"}
@@ -46,6 +46,19 @@ def register(db, data: RegisterInput):
     db.add(user); db.commit(); db.refresh(user)
     return {"token": create_token(user), "user": public_user(user)}
 
+def change_password(db, user, current_password: str, new_password: str):
+    if not verify_password(current_password, user.password_hash):
+        raise HTTPException(400, "La contraseña actual no es válida")
+    try:
+        validate_password(new_password)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    if verify_password(new_password, user.password_hash):
+        raise HTTPException(400, "La nueva contraseña debe ser diferente")
+    user.password_hash = hash_password(new_password)
+    db.commit(); db.refresh(user)
+    return {"token": create_token(user), "user": public_user(user)}
+
 def login(db, email, password):
     user = UserRepository(db).by_email(str(email).lower())
     if not user or api_state(user.state) != "Activo" or not verify_password(password, user.password_hash): raise HTTPException(401, "Credenciales inválidas")
@@ -59,12 +72,14 @@ def category_for(db, data):
 
 def create_event(db, data: EventInput, user):
     if data.status not in STATUS_FROM_API: raise HTTPException(400, "Estado de evento no válido")
+    if datetime.combine(data.date, data.time) <= datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None): raise HTTPException(400, "La fecha y hora del evento deben ser futuras")
     category = category_for(db, data)
     event = Event(title=data.title, description=data.description, date=data.date, time=data.time, location=data.location,
                   capacity=data.capacity, organizer_id=user.id, category_id=category.id, status=STATUS_FROM_API[data.status], image=data.image)
     db.add(event); db.commit(); db.refresh(event); return event_out(event)
 
 def list_events(db, user):
+    finalize_past_events(db)
     events = EventRepository(db).all()
     if api_role(user.role) == "participant": events = [e for e in events if e.status in PUBLIC_EVENTS]
     elif api_role(user.role) == "organizer": events = [e for e in events if e.organizer_id == user.id]
@@ -73,6 +88,47 @@ def list_events(db, user):
 def event_is_future(event):
     now = datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None)
     return datetime.combine(event.date, event.time) > now
+
+def finalize_past_events(db):
+    changed = False
+    for event in db.scalars(select(Event).where(Event.status.in_(PUBLIC_EVENTS))):
+        if not event_is_future(event):
+            event.status = "finalizado"; changed = True
+    if changed: db.commit()
+
+def _assert_event_owner(event, user):
+    if not event: raise HTTPException(404, "Evento no encontrado")
+    if api_role(user.role) != "admin" and (api_role(user.role) != "organizer" or event.organizer_id != user.id): raise HTTPException(403, "Solo puedes administrar tus eventos")
+
+def update_event(db, event_id, data: EventInput, user):
+    event = db.scalar(select(Event).where(Event.id == event_id).with_for_update())
+    _assert_event_owner(event, user)
+    if event.status in {"cancelado", "finalizado"}: raise HTTPException(409, "El evento ya no puede editarse")
+    if datetime.combine(data.date, data.time) <= datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None): raise HTTPException(400, "La fecha y hora del evento deben ser futuras")
+    active_count = len(list(db.scalars(select(Reservation).where(Reservation.event_id == event.id, Reservation.state.in_(ACTIVE_RESERVATIONS)).with_for_update())))
+    if data.capacity < active_count: raise HTTPException(400, "La capacidad no puede ser menor que las reservas activas")
+    category = category_for(db, data)
+    event.title, event.description, event.date, event.time, event.location, event.capacity = data.title, data.description, data.date, data.time, data.location, data.capacity
+    event.category_id, event.status, event.image = category.id, STATUS_FROM_API[data.status], data.image
+    db.commit(); db.refresh(event); return event_out(event)
+
+def cancel_event(db, event_id, user):
+    event = db.scalar(select(Event).where(Event.id == event_id).with_for_update()); _assert_event_owner(event, user)
+    if event.status == "cancelado": return event_out(event)
+    if event.status == "finalizado": raise HTTPException(409, "El evento ya finalizó")
+    event.status = "cancelado"
+    for reservation in event.reservations:
+        if reservation.state in ACTIVE_RESERVATIONS: add_notification(db, reservation.user_id, "cancelacion", f"El evento {event.title} fue cancelado.")
+    db.commit(); db.refresh(event); return event_out(event)
+
+def reschedule_event(db, event_id, data: EventRescheduleInput, user):
+    event = db.scalar(select(Event).where(Event.id == event_id).with_for_update()); _assert_event_owner(event, user)
+    if event.status in {"cancelado", "finalizado"}: raise HTTPException(409, "El evento ya no puede reprogramarse")
+    if datetime.combine(data.date, data.time) <= datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None): raise HTTPException(400, "La nueva fecha y hora deben ser futuras")
+    event.date, event.time, event.status = data.date, data.time, "reprogramado"
+    for reservation in event.reservations:
+        if reservation.state in ACTIVE_RESERVATIONS: add_notification(db, reservation.user_id, "cambio", f"El evento {event.title} fue reprogramado para {data.date} {data.time}.")
+    db.commit(); db.refresh(event); return event_out(event)
 
 def find_reservation(db, reservation_id, lock=False):
     query = select(Reservation).where(Reservation.receipt == str(reservation_id))

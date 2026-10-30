@@ -74,6 +74,7 @@ Backend:
 
 - `PORT`: puerto de escucha, por defecto `4000`.
 - `JWT_SECRET`: secreto para firmar tokens.
+- `ENVIRONMENT`: usa `production` para activar validaciones de seguridad de despliegue.
 - `FRONTEND_ORIGIN`: origen permitido por CORS. Acepta varios valores separados por coma.
 
 Frontend:
@@ -108,3 +109,5 @@ El frontend conserva las rutas y nombres de campos del prototipo. Los eventos bo
 Las fechas y horas de los eventos se almacenan separadas como `DATE` y `TIME`. La API valida si un evento ya pasó usando `TIMEZONE` (por defecto `America/El_Salvador`), sin depender de la zona horaria accidental del equipo.
 
 Las reservas generan notificaciones internas persistidas. Los reportes pueden descargarse en CSV, Excel o PDF desde `GET /reports/export?format=...`; cada exportación queda registrada en `reportes`. El envío por correo solo se activa al configurar SMTP.
+
+Las contraseñas nuevas requieren mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial. El cambio se realiza mediante `POST /auth/change-password` y devuelve un token renovado.

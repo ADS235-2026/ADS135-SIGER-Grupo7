@@ -1,13 +1,28 @@
 from datetime import date, time, datetime
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
+from .security import validate_password
 
 class AuthInput(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=128)
 
 class RegisterInput(AuthInput):
     name: str = Field(min_length=1, max_length=120)
     role: str | None = None
+
+    @field_validator("password")
+    @classmethod
+    def password_policy(cls, value: str) -> str:
+        return validate_password(value)
+
+class ChangePasswordInput(BaseModel):
+    currentPassword: str = Field(min_length=1, max_length=128)
+    newPassword: str = Field(min_length=8, max_length=128)
+
+    @field_validator("newPassword")
+    @classmethod
+    def new_password_policy(cls, value: str) -> str:
+        return validate_password(value)
 
 class PublicUser(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -31,6 +46,10 @@ class EventInput(BaseModel):
     categoryId: int | None = None
     image: str = ""
     description: str = ""
+
+class EventRescheduleInput(BaseModel):
+    date: date
+    time: time
 
 class EventOut(BaseModel):
     id: int; title: str; type: str; date: date; time: time; location: str; capacity: int

@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./siger.db"
     jwt_secret: str = "dev-only-change-me"
     jwt_expires_minutes: int = 480
+    environment: str = "development"
     frontend_origin: str = "http://localhost:8081,http://localhost:3000"
     port: int = 4000
     timezone: str = "America/El_Salvador"

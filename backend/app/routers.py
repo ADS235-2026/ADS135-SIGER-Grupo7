@@ -8,8 +8,8 @@ from .models import Event, Reservation, User
 from .models import Notification
 from .notifications import notification_out, pending_notifications, send_notification
 from .exports import export_report
-from .schemas import AuthInput, AuthResponse, EventInput, EventOut, PublicUser, RegisterInput, ReservationInput, ReservationOut, ReservationStateInput, UserAdminUpdate
-from .services import ACTIVE_RESERVATIONS, PUBLIC_EVENTS, STATUS_FROM_API, api_role, api_state, check_in, create_event, create_reservation, event_out, list_events, login, public_user, register, reservation_out, update_reservation, visible_reservations
+from .schemas import AuthInput, AuthResponse, ChangePasswordInput, EventInput, EventOut, EventRescheduleInput, PublicUser, RegisterInput, ReservationInput, ReservationOut, ReservationStateInput, UserAdminUpdate
+from .services import ACTIVE_RESERVATIONS, PUBLIC_EVENTS, STATUS_FROM_API, api_role, api_state, cancel_event, change_password, check_in, create_event, create_reservation, event_out, finalize_past_events, list_events, login, public_user, register, reservation_out, reschedule_event, update_event, update_reservation, visible_reservations
 
 router = APIRouter()
 
@@ -25,6 +25,10 @@ def auth_register(data: RegisterInput, db: Session = Depends(get_db)): return re
 
 @router.get("/auth/me", response_model=PublicUser, tags=["auth"])
 def auth_me(user: User = Depends(current_user)): return public_user(user)
+
+@router.post("/auth/change-password", response_model=AuthResponse, tags=["auth"])
+def auth_change_password(data: ChangePasswordInput, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    return change_password(db, user, data.currentPassword, data.newPassword)
 
 @router.get("/users", response_model=list[PublicUser], tags=["users"])
 def users(db: Session = Depends(get_db), _user: User = Depends(require_roles("admin"))): return [public_user(u) for u in db.scalars(select(User).order_by(User.id))]
@@ -44,6 +48,7 @@ def events(db: Session = Depends(get_db), user: User = Depends(current_user)): r
 
 @router.get("/events/{event_id}", response_model=EventOut, tags=["events"])
 def event(event_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    finalize_past_events(db)
     row = db.get(Event, event_id)
     role = api_role(user.role)
     if not row or (role == "participant" and row.status not in PUBLIC_EVENTS) or (role == "organizer" and row.organizer_id != user.id): raise HTTPException(404, "Evento no encontrado")
@@ -54,14 +59,13 @@ def event_create(data: EventInput, db: Session = Depends(get_db), user: User = D
 
 @router.patch("/events/{event_id}", response_model=EventOut, tags=["events"])
 def event_update(event_id: int, data: EventInput, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "organizer"))):
-    row = db.get(Event, event_id)
-    if not row: raise HTTPException(404, "Evento no encontrado")
-    if api_role(user.role) != "admin" and row.organizer_id != user.id: raise HTTPException(403, "Solo puedes administrar tus eventos")
-    category_id = data.categoryId
-    if category_id is None: category_id = row.category_id
-    row.title, row.description, row.date, row.time, row.location, row.capacity, row.category_id, row.status, row.image = data.title, data.description, data.date, data.time, data.location, data.capacity, category_id, STATUS_FROM_API.get(data.status, row.status), data.image
-    if sum(1 for r in row.reservations if r.state in ACTIVE_RESERVATIONS) > row.capacity: raise HTTPException(400, "La capacidad no puede ser menor que las reservas activas")
-    db.commit(); db.refresh(row); return event_out(row)
+    return update_event(db, event_id, data, user)
+
+@router.post("/events/{event_id}/cancel", response_model=EventOut, tags=["events"])
+def event_cancel(event_id: int, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "organizer"))): return cancel_event(db, event_id, user)
+
+@router.post("/events/{event_id}/reschedule", response_model=EventOut, tags=["events"])
+def event_reschedule(event_id: int, data: EventRescheduleInput, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "organizer"))): return reschedule_event(db, event_id, data, user)
 
 @router.get("/reservations", response_model=list[ReservationOut], tags=["reservations"])
 def reservations(db: Session = Depends(get_db), user: User = Depends(current_user)): return visible_reservations(db, user)

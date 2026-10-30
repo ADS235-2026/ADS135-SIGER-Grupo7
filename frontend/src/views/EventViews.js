@@ -54,7 +54,7 @@ export function Catalog({ category, setCategory, events, openDetail, reserve, lo
   );
 }
 
-export function EventDetail({ event, reserve, loading }) {
+export function EventDetail({ event, reserve, loading, canManage, editEvent, cancelEvent }) {
   return (
     <section className="detail-layout">
       <div className="detail-hero">
@@ -71,26 +71,22 @@ export function EventDetail({ event, reserve, loading }) {
           <Meta iconName="groups" text={`${event.capacity - event.available}/${event.capacity} registrados`} />
           <Meta iconName="person" text={`Organiza ${event.organizer}`} />
         </div>
-        <button className="primary-button hero-action" disabled={loading} onClick={() => reserve(event)} type="button">
-          <Icon name="bookmark_added" />
-          Confirmar reservación
-        </button>
+        {canManage ? <div className="button-pair hero-action">
+          <button className="ghost-button" disabled={loading} onClick={() => editEvent(event)} type="button"><Icon name="edit" />Editar / reprogramar</button>
+          {event.status !== 'Cancelado' && <button className="primary-button" disabled={loading} onClick={() => cancelEvent(event)} type="button"><Icon name="event_busy" />Cancelar evento</button>}
+        </div> : <button className="primary-button hero-action" disabled={loading || event.status === 'Cancelado'} onClick={() => reserve(event)} type="button">
+          <Icon name="bookmark_added" />Confirmar reservación
+        </button>}
       </div>
     </section>
   );
 }
 
-export function CreateEvent({ createEvent, loading }) {
-  const [form, setForm] = useState({
-    title: 'Foro de Innovación 2026',
-    type: 'Conferencia',
-    date: '2026-11-18',
-    time: '09:00',
-    description: 'Encuentro institucional para compartir tendencias, proyectos y resultados de innovación.',
-    capacity: 150,
-    location: 'Auditorio Principal',
-    status: 'Publicado',
-    image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80',
+export function CreateEvent({ createEvent, loading, initialEvent, saveLabel = 'Publicar evento' }) {
+  const [form, setForm] = useState(() => initialEvent ? { ...initialEvent } : {
+    title: 'Foro de Innovación 2026', type: 'Conferencia', date: '2026-11-18', time: '09:00',
+    description: 'Encuentro institucional para compartir tendencias, proyectos y resultados de innovación.', capacity: 150,
+    location: 'Auditorio Principal', status: 'Publicado', image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80',
   });
 
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
@@ -106,9 +102,9 @@ export function CreateEvent({ createEvent, loading }) {
         <label className="wide">Descripción<textarea value={form.description} onChange={(event) => update('description', event.target.value)} /></label>
         <label>Capacidad<input type="number" value={form.capacity} onChange={(event) => update('capacity', Number(event.target.value))} /></label>
         <label>Ubicación<input value={form.location} onChange={(event) => update('location', event.target.value)} /></label>
-        <label>Estado<select value={form.status} onChange={(event) => update('status', event.target.value)}><option>Publicado</option><option>Borrador</option><option>Casi lleno</option></select></label>
+        <label>Estado<select value={form.status} onChange={(event) => update('status', event.target.value)}><option>Publicado</option><option>Borrador</option><option>Reprogramado</option><option>Cancelado</option></select></label>
         <label className="wide">Imagen del evento<input value={form.image} onChange={(event) => update('image', event.target.value)} placeholder="https://..." /></label>
-        <button className="primary-button wide" disabled={loading} type="submit"><Icon name="publish" />Publicar evento</button>
+        <button className="primary-button wide" disabled={loading} type="submit"><Icon name="publish" />{saveLabel}</button>
       </form>
     </section>
   );
