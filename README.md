@@ -110,4 +110,6 @@ Las fechas y horas de los eventos se almacenan separadas como `DATE` y `TIME`. L
 
 Las reservas generan notificaciones internas persistidas. Los reportes pueden descargarse en CSV, Excel o PDF desde `GET /reports/export?format=...`; cada exportación queda registrada en `reportes`. El envío por correo solo se activa al configurar SMTP.
 
+Cuando un evento está lleno, los participantes pueden entrar a `lista_espera`; al liberarse un cupo, la primera persona de la cola recibe una reservación confirmada y una notificación interna.
+
 Las contraseñas nuevas requieren mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial. El cambio se realiza mediante `POST /auth/change-password` y devuelve un token renovado.

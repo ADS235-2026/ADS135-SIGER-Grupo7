@@ -41,6 +41,8 @@ export function Sidebar({ view, setView, items, logout, currentUser }) {
 }
 
 export function Topbar({ query, setQuery, setView, currentUser, unreadCount = 0 }) {
+  const initials = currentUser?.name?.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase() || 'S';
+  const isParticipant = currentUser?.role === 'participant';
   return (
     <header className="topbar">
       <label className="search-field">
@@ -48,7 +50,7 @@ export function Topbar({ query, setQuery, setView, currentUser, unreadCount = 0 
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar eventos, usuarios o reservaciones..."
+          placeholder={isParticipant ? 'Buscar eventos...' : 'Buscar eventos, usuarios o reservaciones...'}
         />
       </label>
       <div className="topbar-actions">
@@ -59,12 +61,12 @@ export function Topbar({ query, setQuery, setView, currentUser, unreadCount = 0 
         <button className="icon-button" type="button" aria-label="Ayuda">
           <Icon name="help_outline" />
         </button>
-        <button className="profile" onClick={() => setView('security')} type="button">
+        <button className="profile" onClick={() => setView('profile')} type="button">
           <span>
             <strong>{currentUser?.name || 'SIGER'}</strong>
             <small>{roleLabel(currentUser?.role)}</small>
           </span>
-          <img alt="Perfil de usuario" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80" />
+          <span className="topbar-avatar" aria-hidden="true">{initials}</span>
         </button>
       </div>
     </header>

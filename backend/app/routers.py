@@ -8,8 +8,8 @@ from .models import Event, Reservation, User
 from .models import Notification
 from .notifications import notification_out, pending_notifications, send_notification
 from .exports import export_report
-from .schemas import AuthInput, AuthResponse, ChangePasswordInput, EventInput, EventOut, EventRescheduleInput, PublicUser, RegisterInput, ReservationInput, ReservationOut, ReservationStateInput, UserAdminUpdate
-from .services import ACTIVE_RESERVATIONS, PUBLIC_EVENTS, STATUS_FROM_API, api_role, api_state, cancel_event, change_password, check_in, create_event, create_reservation, event_out, finalize_past_events, list_events, login, public_user, register, reservation_out, reschedule_event, update_event, update_reservation, visible_reservations
+from .schemas import AuthInput, AuthResponse, ChangePasswordInput, EventInput, EventOut, EventRescheduleInput, PublicUser, RegisterInput, ReservationInput, ReservationOut, ReservationStateInput, UserAdminUpdate, WaitlistOut
+from .services import ACTIVE_RESERVATIONS, PUBLIC_EVENTS, STATUS_FROM_API, api_role, api_state, cancel_event, change_password, check_in, create_event, create_reservation, event_out, finalize_past_events, join_waitlist, leave_waitlist, list_events, login, public_user, register, reservation_out, reschedule_event, update_event, update_reservation, visible_reservations, visible_waitlist
 
 router = APIRouter()
 
@@ -72,6 +72,15 @@ def reservations(db: Session = Depends(get_db), user: User = Depends(current_use
 
 @router.post("/reservations", response_model=ReservationOut, tags=["reservations"])
 def reservation_create(data: ReservationInput, db: Session = Depends(get_db), user: User = Depends(current_user)): return create_reservation(db, data, user)
+
+@router.post("/events/{event_id}/waitlist", response_model=WaitlistOut, tags=["reservations"])
+def waitlist_join(event_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)): return join_waitlist(db, event_id, user)
+
+@router.get("/waitlist", response_model=list[WaitlistOut], tags=["reservations"])
+def waitlist_list(db: Session = Depends(get_db), user: User = Depends(current_user)): return visible_waitlist(db, user)
+
+@router.delete("/waitlist/{entry_id}", tags=["reservations"])
+def waitlist_leave(entry_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)): return leave_waitlist(db, entry_id, user)
 
 @router.patch("/reservations/{reservation_id}/status", response_model=ReservationOut, tags=["reservations"])
 def reservation_status(reservation_id: str, data: ReservationStateInput, db: Session = Depends(get_db), user: User = Depends(current_user)): return update_reservation(db, reservation_id, data.state, user)

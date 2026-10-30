@@ -66,3 +66,6 @@ class ReservationStateInput(BaseModel):
 class ReservationOut(BaseModel):
     id: str; eventId: int; event: str; userId: int; guest: str; state: str; date: date
     checkedIn: bool; checkedInAt: datetime | None = None; eventDetail: EventOut
+
+class WaitlistOut(BaseModel):
+    id: int; eventId: int; event: str; userId: int; position: int; date: datetime

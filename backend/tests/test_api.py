@@ -119,6 +119,18 @@ def test_concurrent_last_cup_allows_only_one(client):
         results = list(pool.map(reserve, ["guest@test.com", "guest2@test.com"]))
     assert sorted(results) == [200, 409]
 
+def test_waitlist_promotes_first_user_when_a_cup_is_released(client):
+    first = login(client)
+    second = login(client, "guest2@test.com", "Guest123!")
+    reservation = client.post("/reservations", headers=first, json={"eventId":1}).json()
+    joined = client.post("/events/1/waitlist", headers=second)
+    assert joined.status_code == 200 and joined.json()["position"] == 1
+    assert client.get("/waitlist", headers=second).json()[0]["id"] == joined.json()["id"]
+    assert client.post(f"/reservations/{reservation['id']}/cancel", headers=first).status_code == 200
+    reservations = client.get("/reservations", headers=second).json()
+    assert len(reservations) == 1 and reservations[0]["state"] == "Confirmada"
+    assert client.get("/waitlist", headers=second).json() == []
+
 def test_notifications_are_persisted_and_export_is_real(client):
     participant = login(client)
     reservation = client.post("/reservations", headers=participant, json={"eventId": 1}).json()

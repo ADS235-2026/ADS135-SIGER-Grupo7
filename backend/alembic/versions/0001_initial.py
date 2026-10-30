@@ -8,7 +8,9 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    Base.metadata.create_all(bind=op.get_bind())
+    canonical = [models.User, models.Category, models.Event, models.Reservation, models.Attendance, models.Notification, models.Report]
+    for model in canonical:
+        model.__table__.create(op.get_bind(), checkfirst=True)
 
 def downgrade():
     for table in (models.Attendance, models.Reservation, models.Event, models.Category, models.Notification, models.Report, models.User):

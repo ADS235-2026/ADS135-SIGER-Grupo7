@@ -1,11 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from .config import settings
-from .models import Attendance, Category, Event, Reservation, User
+from .models import Attendance, Category, Event, Reservation, User, WaitlistEntry
 from .notifications import add_notification
 from .repositories import EventRepository, ReservationRepository, UserRepository
 from .schemas import EventInput, EventRescheduleInput, RegisterInput, ReservationInput
@@ -17,6 +17,9 @@ PUBLIC_EVENTS = {"activo", "reprogramado"}
 ROLE_TO_API = {"administrador": "admin", "organizador": "organizer", "participante": "participant", "admin": "admin", "organizer": "organizer", "participant": "participant"}
 STATUS_TO_API = {"borrador": "Borrador", "activo": "Publicado", "cancelado": "Cancelado", "reprogramado": "Reprogramado", "finalizado": "Finalizado"}
 STATUS_FROM_API = {"Borrador": "borrador", "Publicado": "activo", "Casi lleno": "activo", "Cancelado": "cancelado", "Reprogramado": "reprogramado", "Finalizado": "finalizado"}
+
+def utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 def api_role(role): return ROLE_TO_API.get(role, role)
 def db_role(role): return {"admin": "administrador", "organizer": "organizador", "participant": "participante"}.get(role, role)
@@ -36,6 +39,12 @@ def reservation_out(r):
             "guest": r.participant.name, "state": r.state.capitalize(), "date": r.event.date,
             "checkedIn": r.attendance is not None, "checkedInAt": r.attendance.checked_in_at if r.attendance else None,
             "eventDetail": event_out(r.event)}
+
+def waitlist_out(entry, position):
+    return {"id": entry.id, "eventId": entry.event_id, "event": entry.event.title, "userId": entry.user_id, "position": position, "date": entry.created_at}
+
+def waitlist_position(db, entry):
+    return db.scalar(select(WaitlistEntry).where(WaitlistEntry.event_id == entry.event_id, WaitlistEntry.created_at < entry.created_at).order_by(WaitlistEntry.created_at))
 
 def register(db, data: RegisterInput):
     if data.role and db_role(data.role) != "participante": raise HTTPException(400, "El registro público solo permite participantes")
@@ -153,7 +162,7 @@ def create_reservation(db, data: ReservationInput, user):
     receipt = data.receipt or str(uuid4())
     if existing:
         if existing.attendance: raise HTTPException(409, "La reservación tiene asistencia y no puede reactivarse")
-        existing.state, existing.receipt, existing.created_at = "confirmada", receipt, datetime.utcnow(); reservation = existing
+        existing.state, existing.receipt, existing.created_at = "confirmada", receipt, utc_now(); reservation = existing
     else:
         reservation = Reservation(event_id=event.id, user_id=user.id, receipt=receipt, state="confirmada"); db.add(reservation)
     add_notification(db, user.id, "confirmacion", f"Tu reserva para {event.title} fue confirmada. Comprobante: {receipt}")
@@ -161,6 +170,51 @@ def create_reservation(db, data: ReservationInput, user):
         db.commit(); db.refresh(reservation); db.expire(event, ["reservations"])
     except IntegrityError: db.rollback(); raise HTTPException(409, "La reservación o comprobante ya existe")
     return reservation_out(reservation)
+
+def join_waitlist(db, event_id, user):
+    event = EventRepository(db).by_id(event_id, lock=True)
+    if not event: raise HTTPException(404, "Evento no encontrado")
+    if api_role(user.role) != "participant" or api_state(user.state) != "Activo": raise HTTPException(403, "Solo los participantes activos pueden entrar a la lista de espera")
+    if event.status not in PUBLIC_EVENTS or not event_is_future(event): raise HTTPException(400, "El evento no está habilitado o ya pasó")
+    active_count = len(list(db.scalars(select(Reservation).where(Reservation.event_id == event.id, Reservation.state.in_(ACTIVE_RESERVATIONS)).with_for_update())))
+    if active_count < event.capacity: raise HTTPException(400, "El evento todavía tiene cupos disponibles")
+    existing_reservation = db.scalar(select(Reservation).where(Reservation.event_id == event.id, Reservation.user_id == user.id))
+    if existing_reservation and existing_reservation.state in ACTIVE_RESERVATIONS: raise HTTPException(409, "Ya tienes una reservación para este evento")
+    existing = db.scalar(select(WaitlistEntry).where(WaitlistEntry.event_id == event.id, WaitlistEntry.user_id == user.id))
+    if existing: raise HTTPException(409, "Ya estás en la lista de espera")
+    entry = WaitlistEntry(event_id=event.id, user_id=user.id); db.add(entry); db.commit(); db.refresh(entry)
+    position = len(list(db.scalars(select(WaitlistEntry).where(WaitlistEntry.event_id == event.id, WaitlistEntry.id <= entry.id))))
+    return waitlist_out(entry, position)
+
+def visible_waitlist(db, user):
+    query = select(WaitlistEntry).order_by(WaitlistEntry.created_at)
+    if api_role(user.role) == "participant": query = query.where(WaitlistEntry.user_id == user.id)
+    elif api_role(user.role) == "organizer": query = query.join(Event).where(Event.organizer_id == user.id)
+    rows = list(db.scalars(query))
+    positions = {}
+    result = []
+    for entry in rows:
+        positions[entry.event_id] = positions.get(entry.event_id, 0) + 1
+        result.append(waitlist_out(entry, positions[entry.event_id]))
+    return result
+
+def leave_waitlist(db, entry_id, user):
+    entry = db.get(WaitlistEntry, entry_id)
+    if not entry: raise HTTPException(404, "Entrada de lista de espera no encontrada")
+    if api_role(user.role) != "admin" and entry.user_id != user.id and not (api_role(user.role) == "organizer" and entry.event.organizer_id == user.id):
+        raise HTTPException(403, "No puedes retirar esta entrada de la lista de espera")
+    db.delete(entry); db.commit(); return {"id": entry_id, "removed": True}
+
+def promote_waitlisted_user(db, event):
+    active_count = len(list(db.scalars(select(Reservation).where(Reservation.event_id == event.id, Reservation.state.in_(ACTIVE_RESERVATIONS)).with_for_update())))
+    if active_count >= event.capacity: return None
+    entry = db.scalar(select(WaitlistEntry).where(WaitlistEntry.event_id == event.id).order_by(WaitlistEntry.created_at).with_for_update())
+    if not entry: return None
+    receipt = str(uuid4())
+    reservation = Reservation(event_id=event.id, user_id=entry.user_id, receipt=receipt, state="confirmada")
+    db.add(reservation); add_notification(db, entry.user_id, "confirmacion", f"Se liberó un cupo y tu reserva para {event.title} fue confirmada. Comprobante: {receipt}")
+    db.delete(entry)
+    return reservation
 
 def visible_reservations(db, user):
     rows = ReservationRepository(db).all()
@@ -181,6 +235,7 @@ def update_reservation(db, reservation_id, state, user):
         if r.attendance: raise HTTPException(409, "No se puede cancelar una reservación con asistencia")
     r.state = target
     if target == "cancelada": add_notification(db, r.user_id, "cancelacion", f"Tu reserva para {r.event.title} fue cancelada.")
+    if target == "cancelada": promote_waitlisted_user(db, r.event)
     db.commit(); db.refresh(r); return reservation_out(r)
 
 def check_in(db, reservation_id, user, event_id=None):

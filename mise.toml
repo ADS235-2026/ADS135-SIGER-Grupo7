@@ -1,6 +1,10 @@
 [tasks.dev]
 description = "Levanta SIGER completo con FastAPI, MariaDB y React"
-run = "docker compose up --build"
+run = "docker compose up --build --watch"
+
+[tasks.watch]
+description = "Levanta SIGER y reconstruye servicios al detectar cambios"
+run = "docker compose up --watch"
 
 [tasks.up]
 description = "Levanta SIGER usando imágenes ya construidas"
@@ -16,7 +20,7 @@ run = "docker compose logs -f api web"
 
 [tasks.test]
 description = "Ejecuta las pruebas del backend"
-run = "cd backend && pytest -q"
+run = "cd backend && python -m pytest -q"
 
 [tasks.migrate]
 description = "Aplica las migraciones de base de datos local"

@@ -45,10 +45,20 @@ export function EmptyState({ iconName, title, description }) {
   );
 }
 
+export function LoadingState({ label = 'Cargando información' }) {
+  return (
+    <div className="loading-state" role="status" aria-live="polite">
+      <span className="loading-spinner" aria-hidden="true" />
+      <strong>{label}</strong>
+      <p>Estamos preparando tu espacio en SIGER.</p>
+    </div>
+  );
+}
+
 export function EventRow({ event }) {
   return (
     <div className="event-row">
-      <img alt="" src={event.image} />
+      <img alt="" src={event.image || '/logo512.png'} />
       <div>
         <strong>{event.title}</strong>
         <small>{formatDate(event.date)} · {event.location}</small>

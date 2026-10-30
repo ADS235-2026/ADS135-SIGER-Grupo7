@@ -50,6 +50,9 @@ Protegidos:
 - `POST /events`: crear evento, solo administrador u organizador.
 - `GET /reservations`: reservaciones del usuario o todas segun rol.
 - `POST /reservations`: crear reservacion.
+- `POST /events/:eventId/waitlist`: entrar a la lista de espera si el evento está lleno.
+- `GET /waitlist`: consultar la lista de espera visible para el usuario.
+- `DELETE /waitlist/:id`: retirar una entrada propia de la lista de espera.
 - `PATCH /reservations/:id/status`: actualizar estado, solo administrador u organizador.
 - `POST /attendance/check-in`: registrar asistencia.
 - `GET /attendance/:eventId`: asistencia por evento.
@@ -66,7 +69,7 @@ La API usa repositorios SQLAlchemy y MariaDB. Los datos sobreviven al reinicio. 
 
 Las notificaciones se guardan aunque SMTP no esté configurado. En ese caso permanecen pendientes y la API devuelve un error explícito al intentar entregarlas; no se anuncian correos enviados.
 
-Alembic crea las siete tablas del diseño: `usuarios`, `categorias`, `eventos`, `reservaciones`, `asistencias`, `notificaciones` y `reportes`. La migración `0002` transforma el esquema temporal anterior si encuentra sus tablas, sin reinicializar la base.
+Alembic crea las siete tablas del diseño y `lista_espera`: `usuarios`, `categorias`, `eventos`, `reservaciones`, `asistencias`, `notificaciones`, `reportes` y `lista_espera`. La migración `0002` transforma el esquema temporal anterior si encuentra sus tablas, sin reinicializar la base; `0003` agrega la lista de espera.
 
 ## Docker
 

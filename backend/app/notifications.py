@@ -1,10 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from email.message import EmailMessage
 import smtplib
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from .config import settings
+
+def utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from .models import Notification, User
 
 def add_notification(db: Session, user_id: int, kind: str, message: str) -> Notification:
@@ -35,7 +38,7 @@ def send_notification(db: Session, item: Notification) -> Notification:
         if settings.smtp_user and settings.smtp_password:
             smtp.login(settings.smtp_user, settings.smtp_password)
         smtp.send_message(message)
-    item.sent_at = datetime.utcnow()
+    item.sent_at = utc_now()
     db.commit()
     db.refresh(item)
     return item
